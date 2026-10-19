@@ -74,6 +74,46 @@ model=ContextModel(
 
 )
 
+# Query (Q): what a position is looking for.
+# Key (K): what a position offers for matching.
+# Value (V): the information a position contributes when attended to.
+
+
+x=data[:block_size].unsqueeze(0)
+
+embedded=model.embedding(x)
+
+query_layer=nn.Linear(embedding_dim,embedding_dim,bias=False)
+key_layer=nn.Linear(embedding_dim,embedding_dim,bias=False)
+
+queries=query_layer(embedded)
+keys=key_layer(embedded)
+
+scores=torch.matmul(
+    queries,
+    keys.transpose(-2,-1)
+)
+
+weights=F.softmax(
+    scores/(embedding_dim**0.5),
+    dim=1
+)
+
+print("embedded shape :",embedded.shape)
+print("score shape :",scores.shape)
+print("attention weight")
+print(weights[0])
+
+value_layer=nn.Linear(embedding_dim,embedding_dim,bias=False)
+values=value_layer(embedded)
+attended=torch.matmul(                     # matmul is used for matrix multiplication and helps to calculate attention scores
+    weights, 
+    values
+)
+
+print("value shape :",values.shape)
+print("attention output shape :",attended.shape)
+print("attended output :",attended)
 
 # print("output shape :",output.shape)
 
