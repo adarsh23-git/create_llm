@@ -93,12 +93,23 @@ scores=torch.matmul(
     queries,
     keys.transpose(-2,-1)
 )
+mask=torch.tril(
+    torch.ones(block_size,block_size)
+).bool()
+
+scores=scores.masked_fill(
+    ~mask,
+    float("-inf")
+)
+
 
 weights=F.softmax(
     scores/(embedding_dim**0.5),
-    dim=1
+    dim=-1
 )
 
+print("casual mask")
+print(mask)
 print("embedded shape :",embedded.shape)
 print("score shape :",scores.shape)
 print("attention weight")
