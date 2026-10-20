@@ -94,12 +94,12 @@ scores=torch.matmul(
     keys.transpose(-2,-1)
 )
 mask=torch.tril(
-    torch.ones(block_size,block_size)
+    torch.ones(block_size,block_size)          # make lower traingular matrix
 ).bool()
 
 scores=scores.masked_fill(
     ~mask,
-    float("-inf")
+    float("-inf")              # ~ is the logical operator ~mask represent true values and then true values is filled with negative infinity if it is simply mask then it target False values
 )
 
 
@@ -108,7 +108,7 @@ weights=F.softmax(
     dim=-1
 )
 
-print("casual mask")
+print("causal mask")
 print(mask)
 print("embedded shape :",embedded.shape)
 print("score shape :",scores.shape)
