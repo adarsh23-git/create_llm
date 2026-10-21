@@ -103,6 +103,7 @@ optimizer=torch.optim.Adam(
 )
 
 for epoch in range(1001):
+    totalloss=0
     for i in range(len(data)-block_size):
         x=data[i:i+block_size].unsqueeze(0)
         y=data[i+block_size].unsqueeze(0)
@@ -117,9 +118,12 @@ for epoch in range(1001):
         loss.backward()
         optimizer.step()
 
+        totalloss+=1
+
 
     if epoch%100==0:
-        print(f"epoch :{epoch}, loss :{loss.item()}")
+        avgloss=totalloss/(len(data)-block_size)
+        print(f"epoch :{epoch}, loss :{avgloss:.2f}")
 
 
 model.eval()
