@@ -14,11 +14,15 @@ class ContextModel(nn.Module):
         self.key_layer=nn.Linear(embedding_dim,embedding_dim,bias=False)      #key_layer learns how each position is matched against queries.
         self.value_layer=nn.Linear(embedding_dim,embedding_dim,bias=False)    #value_layer learns the information each position contributes.
 
+        self.postion_embedding=nn.Embedding(block_size,embedding_dim)
         self.ffn=nn.Sequential(
             nn.Linear(embedding_dim,embedding_dim*4),
             nn.ReLU(),
             nn.Linear(embedding_dim*4,embedding_dim)
         )
+
+        self.ln1=nn.LayerNorm(embedding_dim)
+        self.ln2=nn.LayerNorm(embedding_dim)
 
     def forward(self,x):
         embedded=self.embedding(x)
@@ -51,9 +55,12 @@ class ContextModel(nn.Module):
         )
 
         attended=torch.matmul(weights,values)
+        x=self.ln1(embedded+attended)
         ffn_output=self.ffn(attended)
+        x=self.ln2(x+ffn_output)
 
-        combined = attended.reshape(attended.size(0), -1)
+        # combined = attended.reshape(attended.size(0), -1)
+        combined=x.reshape(x.size(0),-1)
         logits = self.fc(combined)
 
         return logits
