@@ -27,6 +27,11 @@ class ContextModel(nn.Module):
     def forward(self,x):
         embedded=self.embedding(x)
 
+        position=torch.arange(x.size(1),device=x.device) # arrange create postion Id for context 
+        position_embedded=self.postion_embedding(position)   # convert Id`s in learnable vectors`
+
+        embedded=embedded+position_embedded       # combine charecter identity and position information
+
         queries=self.query_layer(embedded)
         keys=self.key_layer(embedded)
         values=self.value_layer(embedded)
