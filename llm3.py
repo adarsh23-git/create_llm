@@ -9,6 +9,7 @@ class ContextModel(nn.Module):
         super().__init__()
 
         self.num_heads=2
+        self.embedding_dim=embedding_dim
 
         self.embedding=nn.Embedding(vocab_size,embedding_dim)
         self.fc=nn.Linear(block_size*embedding_dim,vocab_size)
@@ -18,7 +19,9 @@ class ContextModel(nn.Module):
         self.query_layer=nn.Linear(embedding_dim,embedding_dim,bias=False)    #query_layer learns how each position searches for relevant information.
         self.key_layer=nn.Linear(embedding_dim,embedding_dim,bias=False)      #key_layer learns how each position is matched against queries.
         self.value_layer=nn.Linear(embedding_dim,embedding_dim,bias=False)    #value_layer learns the information each position contributes.
-
+        
+        self.output_layer=nn.Linear(embedding_dim,embedding_dim)
+        
         self.postion_embedding=nn.Embedding(block_size,embedding_dim)
         self.ffn=nn.Sequential(
             nn.Linear(embedding_dim,embedding_dim*4),
@@ -38,7 +41,7 @@ class ContextModel(nn.Module):
         embedded=embedded+position_embedded       # combine character identity and position information
 
         queries=self.query_layer(embedded)
-        
+
         queries=queries.view(                         # It reshapes the tensor without changing its underlying data.
             queries.size(0),
             queries.size(1),
@@ -46,7 +49,29 @@ class ContextModel(nn.Module):
             self.head_dim      
         )
         keys=self.key_layer(embedded)
+        keys=keys.view(
+            keys.size(0),
+            keys.size(1),
+            self.num_heads,
+            self.head_dim
+        )
         values=self.value_layer(embedded)
+        values=values.view(
+            values.size(0),
+            values.size(1),
+            self.num_heads,
+            self.head_dim
+        )
+
+        # Before transposing, each tensor has shape:
+        # [1, 3, 2, 4] — batch, tokens, heads, features.
+        # After transposing dimensions 1 and 2:
+        # [1, 2, 3, 4] — batch, heads, tokens, features.
+        #This arrangement makes it easier to calculate attention separately for each head.
+
+        queries=queries.transpose(1,2)    #
+        keys=keys.transpose(1,2)
+        values=values.transpose(1,2)
 
         scores=torch.matmul(
             queries,
@@ -72,8 +97,18 @@ class ContextModel(nn.Module):
         )
 
         attended=torch.matmul(weights,values)
+
+        attended=attended.transpose(1,2).contiguous()
+        attended=attended.view(
+            attended.size(0),
+            attended.size(1),
+            self.embedding_dim
+        )
+
+        attended=self.output_layer(attended)
         x=self.ln1(embedded+attended)
-        ffn_output=self.ffn(attended)
+
+        ffn_output=self.ffn(x)
         x=self.ln2(x+ffn_output)
 
         # combined = attended.reshape(attended.size(0), -1)
