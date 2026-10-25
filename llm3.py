@@ -8,8 +8,13 @@ class ContextModel(nn.Module):
     def __init__(self,vocab_size,block_size,embedding_dim):
         super().__init__()
 
+        self.num_heads=2
+
         self.embedding=nn.Embedding(vocab_size,embedding_dim)
         self.fc=nn.Linear(block_size*embedding_dim,vocab_size)
+
+        self.head_dim=embedding_dim // self.num_heads
+
         self.query_layer=nn.Linear(embedding_dim,embedding_dim,bias=False)    #query_layer learns how each position searches for relevant information.
         self.key_layer=nn.Linear(embedding_dim,embedding_dim,bias=False)      #key_layer learns how each position is matched against queries.
         self.value_layer=nn.Linear(embedding_dim,embedding_dim,bias=False)    #value_layer learns the information each position contributes.
@@ -30,9 +35,16 @@ class ContextModel(nn.Module):
         position=torch.arange(x.size(1),device=x.device) # arrange create postion Id for context 
         position_embedded=self.postion_embedding(position)   # convert Id`s in learnable vectors`
 
-        embedded=embedded+position_embedded       # combine charecter identity and position information
+        embedded=embedded+position_embedded       # combine character identity and position information
 
         queries=self.query_layer(embedded)
+        
+        queries=queries.view(                         # It reshapes the tensor without changing its underlying data.
+            queries.size(0),
+            queries.size(1),
+            self.num_heads,
+            self.head_dim      
+        )
         keys=self.key_layer(embedded)
         values=self.value_layer(embedded)
 
