@@ -28,3 +28,12 @@ class MiniGPT(nn.Module):
 
         embedded=token_embedded+position_embedded
         return embedded
+
+
+
+#     The output shape is [4, 5, 16].
+
+
+# -   4 = batch size (4 examples).
+# -   5 = block size (5 tokens per example).
+# -   16 = embedding dimension (each token gets a vector of 16 numbers).
