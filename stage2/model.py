@@ -16,17 +16,15 @@ class MiniGPT(nn.Module):
         )
 
 
-        def forward(self,x):
-            batch_size,sequence_length=x.shape
+    def forward(self,x):
+        batch_size,sequence_length=x.shape
+        token_embedded=self.token_embedding(x)
+        positions=torch.arange(
+           sequence_length,
+            device=x.device
+        )
 
-            token_embedded=self.token_embedding(x)
-            positions=torch.arange(
-                sequence_length,
-                device=x.device
-            )
+        position_embedded=self.position_embedding(positions)
 
-            position_embedded=self.position_embedding(positions)
-
-            embedded=token_embedded+position_embedded
-
-            return embedded
+        embedded=token_embedded+position_embedded
+        return embedded
