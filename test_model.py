@@ -15,4 +15,4 @@ x=torch.tensor([
 output=model(x)
 
 print("input shape :",x.shape)
-print("output shape :",output.shape)
+print("output shape :",output.shape)            
