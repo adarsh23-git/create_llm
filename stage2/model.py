@@ -44,6 +44,10 @@ class MiniGPT(nn.Module):
         )
         print("scores shape :",scores.shape)
         print("scores :",scores)
+
+        attention_weights=F.softmax(scores,dim=-1)     # dim=-1 means row-wise softmax
+        print("attention weight shape :",attention_weights.shape)
+        print("attention weight :",attention_weights)
         return embedded
 
 
