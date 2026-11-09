@@ -37,6 +37,13 @@ class MiniGPT(nn.Module):
         print("queries shape :",queries.shape)
         print("key shape :",keys.shape)
         print("values shape :",values.shape)
+
+        scores=torch.matmul(                    # attention score = Q x K^T   -1 is last dimension and -2 next last
+            queries,
+            keys.transpose(-2,-1)
+        )
+        print("scores shape :",scores.shape)
+        print("scores :",scores)
         return embedded
 
 
