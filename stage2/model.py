@@ -15,18 +15,28 @@ class MiniGPT(nn.Module):
             embedding_dim
         )
 
+        self.query_layer=nn.Linear(embedding_dim,embedding_dim,bias=False)
+        self.key_layer=nn.Linear(embedding_dim,embedding_dim,bias=False)
+        self.value_layer=nn.Linear(embedding_dim,embedding_dim,bias=False)
+
 
     def forward(self,x):
         batch_size,sequence_length=x.shape
         token_embedded=self.token_embedding(x)
         positions=torch.arange(
            sequence_length,
-            device=x.device
+           device=x.device
         )
 
         position_embedded=self.position_embedding(positions)
 
         embedded=token_embedded+position_embedded
+        queries=self.query_layer(embedded)
+        keys=self.key_layer(embedded)
+        values=self.value_layer(embedded)
+        print("queries shape :",queries.shape)
+        print("key shape :",keys.shape)
+        print("values shape :",values.shape)
         return embedded
 
 
