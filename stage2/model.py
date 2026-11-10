@@ -45,9 +45,26 @@ class MiniGPT(nn.Module):
         print("scores shape :",scores.shape)
         print("scores :",scores)
 
+        mask=torch.tril(                #torch.ones() creates a matrix filled with ones.
+        torch.ones(                      #torch.tril() keeps the lower triangle.
+            sequence_length,
+            sequence_length,
+            device=x.device
+            )
+        ).bool()                         #.bool() converts values into True/False.
+
+        scores=scores.masked_fill(
+            ~mask,                       #~mask reverses True and False.
+            float('-inf')                #masked_fill() replaces future-token scores with negative infinity.
+        )
+
         attention_weights=F.softmax(scores,dim=-1)     # dim=-1 means row-wise softmax
+        attention_output=torch.matmul(attention_weights,values)       # attention(Q,K,V)=softmax(QK^T)V
         print("attention weight shape :",attention_weights.shape)
         print("attention weight :",attention_weights)
+        print("attention output shape :",attention_output.shape)
+
+
         return embedded
 
 
