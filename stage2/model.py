@@ -2,6 +2,56 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+class CausalSelfAttention(nn.Module):
+
+    def __init__(self, embedding_dim, block_size):
+
+        super().__init__()
+
+        self.query_layer = nn.Linear(embedding_dim, embedding_dim, bias=False)
+        self.key_layer = nn.Linear(embedding_dim, embedding_dim, bias=False)
+        self.value_layer = nn.Linear(embedding_dim, embedding_dim, bias=False)
+
+        self.block_size = block_size
+        self.embedding_dim = embedding_dim
+
+    def forward(self, x):
+
+        batch_size, sequence_length, embedding_dim = x.shape
+
+        queries = self.query_layer(x)
+        keys = self.key_layer(x)
+        values = self.value_layer(x)
+
+        scores = torch.matmul(
+            queries,
+            keys.transpose(-2, -1)
+        )
+
+        scores = scores / (self.embedding_dim ** 0.5)
+
+        mask = torch.tril(     #torch.ones() creates a matrix filled with ones.
+            torch.ones(        #torch.tril() keeps the lower triangle.
+                sequence_length,
+                sequence_length,
+                device=x.device
+            )
+        ).bool()             #.bool() converts values into True/False.
+
+        scores = scores.masked_fill(
+            ~mask,                        #~mask reverses True and False.
+            float('-inf')                  #masked_fill() replaces future-token scores with negative infinity
+        )
+
+        attention_weights = F.softmax(scores, dim=-1) # dim=-1 means row-wise softmax
+
+        attention_output = torch.matmul(          # attention(Q,K,V)=softmax(QK^T)V
+            attention_weights,
+            values
+        )
+
+        return attention_output
+    
 class MiniGPT(nn.Module):
     def __init__(self,vocab_size,block_size,embedding_dim):
         super().__init__()
@@ -15,9 +65,11 @@ class MiniGPT(nn.Module):
             embedding_dim
         )
 
-        self.query_layer=nn.Linear(embedding_dim,embedding_dim,bias=False)
-        self.key_layer=nn.Linear(embedding_dim,embedding_dim,bias=False)
-        self.value_layer=nn.Linear(embedding_dim,embedding_dim,bias=False)
+        # Create attention only once
+        self.attention = CausalSelfAttention(
+            embedding_dim,
+            block_size
+        )
 
 
     def forward(self,x):
@@ -30,43 +82,11 @@ class MiniGPT(nn.Module):
 
         position_embedded=self.position_embedding(positions)
 
-        embedded=token_embedded+position_embedded
-        queries=self.query_layer(embedded)
-        keys=self.key_layer(embedded)
-        values=self.value_layer(embedded)
-        print("queries shape :",queries.shape)
-        print("key shape :",keys.shape)
-        print("values shape :",values.shape)
+        # Combine token and positional embeddings
+        embedded = token_embedded + position_embedded
 
-        scores=torch.matmul(                    # attention score = Q x K^T   -1 is last dimension and -2 next last
-            queries,
-            keys.transpose(-2,-1)
-        )
-        print("scores shape :",scores.shape)
-        print("scores :",scores)
-
-        mask=torch.tril(                #torch.ones() creates a matrix filled with ones.
-        torch.ones(                      #torch.tril() keeps the lower triangle.
-            sequence_length,
-            sequence_length,
-            device=x.device
-            )
-        ).bool()                         #.bool() converts values into True/False.
-
-        scores=scores.masked_fill(
-            ~mask,                       #~mask reverses True and False.
-            float('-inf')                #masked_fill() replaces future-token scores with negative infinity.
-        )
-
-        attention_weights=F.softmax(scores,dim=-1)     # dim=-1 means row-wise softmax
-        attention_output=torch.matmul(attention_weights,values)       # attention(Q,K,V)=softmax(QK^T)V
-        print("attention weight shape :",attention_weights.shape)
-        print("attention weight :",attention_weights)
-        print("attention output shape :",attention_output.shape)
-
-
-        return embedded
-
+        attention_output=self.attention(embedded)
+        return attention_output
 
 
 #     The output shape is [4, 5, 16].
