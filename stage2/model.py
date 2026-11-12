@@ -18,6 +18,11 @@ class CausalSelfAttention(nn.Module):
         self.num_heads=2
         self.head_dim=embedding_dim // self.num_heads
 
+        self.output_layer=nn.Linear(
+            embedding_dim,
+            embedding_dim
+        )
+
     def forward(self, x):
 
         batch_size, sequence_length, embedding_dim = x.shape
@@ -26,9 +31,9 @@ class CausalSelfAttention(nn.Module):
         keys = self.key_layer(x)
         values = self.value_layer(x)
 
-        queries=queries.view(
-            batch_size,
-            sequence_length,
+        queries=queries.view(                 #view() is used to reshape a tensor without changing its actual data values.
+            batch_size,                       #We can convert a 1D tensor into a 2D tensor using view()
+            sequence_length,                       
             self.num_heads,
             self.head_dim
         )
@@ -75,6 +80,15 @@ class CausalSelfAttention(nn.Module):
             attention_weights,
             values
         )
+        attention_output = attention_output.transpose(1, 2)
+
+        attention_output=attention_output.contiguous().view(   #transpose() changes how PyTorch views the tensor in memory without necessarily rearranging the underlying data. .contiguous() creates a contiguous memory layout so that .view() can safely reshape it.
+            batch_size,
+            sequence_length,
+            self.embedding_dim
+        )
+
+        attention_output=self.output_layer(attention_output)
 
         return attention_output
     
