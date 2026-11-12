@@ -15,6 +15,9 @@ class CausalSelfAttention(nn.Module):
         self.block_size = block_size
         self.embedding_dim = embedding_dim
 
+        self.num_heads=2
+        self.head_dim=embedding_dim // self.num_heads
+
     def forward(self, x):
 
         batch_size, sequence_length, embedding_dim = x.shape
@@ -23,12 +26,35 @@ class CausalSelfAttention(nn.Module):
         keys = self.key_layer(x)
         values = self.value_layer(x)
 
+        queries=queries.view(
+            batch_size,
+            sequence_length,
+            self.num_heads,
+            self.head_dim
+        )
+        keys = keys.view(                    #[2, 3, 2, 4]
+            batch_size,                          #Batch × Sequence × Heads × Head dimension
+            sequence_length,
+            self.num_heads,
+            self.head_dim
+        )
+ 
+        values = values.view(
+            batch_size,
+            sequence_length,
+            self.num_heads,
+            self.head_dim
+        )
+        queries = queries.transpose(1, 2)
+        keys = keys.transpose(1, 2)
+        values = values.transpose(1, 2)
+    
         scores = torch.matmul(
             queries,
             keys.transpose(-2, -1)
         )
 
-        scores = scores / (self.embedding_dim ** 0.5)
+        scores = scores / (self.head_dim ** 0.5)
 
         mask = torch.tril(     #torch.ones() creates a matrix filled with ones.
             torch.ones(        #torch.tril() keeps the lower triangle.
