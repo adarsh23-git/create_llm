@@ -18,7 +18,7 @@ class CausalSelfAttention(nn.Module):
         self.num_heads=2
         self.head_dim=embedding_dim // self.num_heads
 
-        self.output_layer=nn.Linear(
+        self.output_layer=nn.Linear(       #Its job is to learn how to combine information from different attention heads
             embedding_dim,
             embedding_dim
         )
@@ -91,6 +91,20 @@ class CausalSelfAttention(nn.Module):
         attention_output=self.output_layer(attention_output)
 
         return attention_output
+
+class TransformerBlock(nn.Module):
+    def __init__(self,embedding_dim,block_size):
+        super().__init__()
+        self.attention=CausalSelfAttention(
+            embedding_dim,
+            block_size
+        )
+
+    def forward(self,x):
+        attention_output=self.attention(x)
+        x=x+attention_output
+
+        return x
     
 class MiniGPT(nn.Module):
     def __init__(self,vocab_size,block_size,embedding_dim):
