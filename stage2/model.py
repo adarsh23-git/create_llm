@@ -99,10 +99,23 @@ class TransformerBlock(nn.Module):
             embedding_dim,
             block_size
         )
+        self.layer_norm1=nn.LayerNorm(embedding_dim)   #LayerNorm normalizes the features of each token representation so their values have a more controlled distribution.
+        self.layer_norm2 = nn.LayerNorm(embedding_dim)
 
+        self.fnn=nn.Sequential(
+            nn.Linear(embedding_dim,embedding_dim*4),
+            nn.ReLU,
+            nn.Linear(embedding_dim*4,embedding_dim)
+        )
     def forward(self,x):
         attention_output=self.attention(x)
         x=x+attention_output
+
+        x=self.layer_norm1(x)
+
+        fnn_output=self.fnn(x)
+        x=x+fnn_output
+        x=self.layer_norm2(x)
 
         return x
     
