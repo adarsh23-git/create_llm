@@ -100,13 +100,13 @@ class TransformerBlock(nn.Module):
             block_size
         )
         self.layer_norm1=nn.LayerNorm(embedding_dim)   #LayerNorm normalizes the features of each token representation so their values have a more controlled distribution.
-        self.layer_norm2 = nn.LayerNorm(embedding_dim)
-
         self.fnn=nn.Sequential(
             nn.Linear(embedding_dim,embedding_dim*4),
-            nn.ReLU,
+            nn.ReLU(),
             nn.Linear(embedding_dim*4,embedding_dim)
         )
+        self.layer_norm2 = nn.LayerNorm(embedding_dim)
+
     def forward(self,x):
         attention_output=self.attention(x)
         x=x+attention_output
@@ -133,9 +133,19 @@ class MiniGPT(nn.Module):
         )
 
         # Create attention only once
-        self.attention = CausalSelfAttention(
+        # self.attention = CausalSelfAttention(
+        #     embedding_dim,
+        #     block_size
+        # )
+
+        self.transformer_block=TransformerBlock(
             embedding_dim,
             block_size
+        )
+
+        self.lm_head=nn.Linear(           #lm_head converts the transformer’s output embeddings into vocabulary scores (logits)
+            embedding_dim,
+            vocab_size
         )
 
 
@@ -152,8 +162,10 @@ class MiniGPT(nn.Module):
         # Combine token and positional embeddings
         embedded = token_embedded + position_embedded
 
-        attention_output=self.attention(embedded)
-        return attention_output
+        # attention_output=self.attention(embedded)
+        output=self.transformer_block(embedded)
+        logits=self.lm_head(output)
+        return logits
 
 
 #     The output shape is [4, 5, 16].
