@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 
 from tokenizer import CharacterTokenizer
 from dataset import LanguageDataset
-# from stage2.model import MiniGPT
+from model import MiniGPT
 
 project_root=Path(__file__).resolve().parents[1]
 
@@ -30,6 +30,21 @@ dataloader=DataLoader(                     #Groups examples into batches
     batch_size=2,
     shuffle=True
 )
+
+model=MiniGPT(
+    vocab_size=tokenizer.vocab_size,
+    block_size=block_size,
+    embedding_dim=32
+)
+
+loss_function=nn.CrossEntropyLoss()
+
+optimizer=torch.optim.AdamW(
+    model.parameters(),
+    lr=0.001
+)
+
+print("model created successfully")
 
 print("vocabulary size :",tokenizer.vocab_size)
 print("dataset size :",len(dataset))
