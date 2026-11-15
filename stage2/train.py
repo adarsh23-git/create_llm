@@ -46,6 +46,33 @@ optimizer=torch.optim.AdamW(
 
 print("model created successfully")
 
+num_epochs=100
+
+for epoch in range(num_epochs):
+    total_loss=0
+    for x,y in dataloader:
+        optimizer.zero_grad()
+
+        logits=model(x)         #	Predicts next-token logits
+
+        batch_size,sequence_length,vocab_size=logits.shape
+
+        loss=loss_function(
+            logits.reshape(batch_size*sequence_length,vocab_size),
+            y.reshape(batch_size*sequence_length)
+        )
+
+        loss.backward()
+
+        optimizer.step()
+
+        total_loss+=loss.item()
+
+    average_loss=total_loss/len(dataloader)
+
+    if (epoch+1)%10==0:
+        print(f"epoch[{epoch+1}/{num_epochs}], loss :{average_loss:.4f}")
+
 print("vocabulary size :",tokenizer.vocab_size)
 print("dataset size :",len(dataset))
 
