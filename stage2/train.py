@@ -80,3 +80,17 @@ x,y=next(iter(dataloader))
 
 print("input shape :",x.shape)
 print("output shape :",y.shape)
+
+
+checkpoint_path=project_root/"checkpoint"/"minigpt.pt"
+checkpoint_path.parent.mkdir(parents=True,exist_ok=True)
+
+torch.save({
+    "model_state_dict":model.state_dict(),
+    "vocab_size":tokenizer.vocab_size,
+    "block_size":block_size,
+    "embedding_dim":32,
+    "chars":tokenizer.chars
+},checkpoint_path)
+
+print("model saved successfully")
