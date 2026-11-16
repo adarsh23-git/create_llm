@@ -1,0 +1,3 @@
+hello world welcome to the world of llm.
+i am learning to build a language model from scratch.
+language models learn patterns from text.
