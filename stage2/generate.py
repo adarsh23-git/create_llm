@@ -4,6 +4,10 @@ from pathlib import Path
 from model import MiniGPT
 from tokenizer import CharacterTokenizer
 
+#__file__ → location of the current Python file (generate.py).
+# .resolve() → obtains its absolute path.
+# .parents[1] → goes up two directory levels in the path's parent hierarchy.
+
 project_root=Path(__file__).resolve().parents[1]
 checkpoint_path=project_root/"checkpoint"/"minigpt.pt"
 
@@ -15,11 +19,17 @@ checkpoint=torch.load(
 
 tokenizer=CharacterTokenizer("".join(checkpoint["chars"]))
 
+# recreate model Because minigpt.pt stores trained parameters, not the Python class definition itself.
+# We first create the architecture, then load its trained parameters.
+
 model=MiniGPT(
     vocab_size=checkpoint["vocab_size"],
     block_size=checkpoint["block_size"],
     embedding_dim=checkpoint["embedding_dim"]
 )
+
+#MiniGPT() → creates an empty model architecture with newly initialized parameters.
+#load_state_dict() → replaces those parameters with the learned parameters from training.
 
 model.load_state_dict(checkpoint["model_state_dict"])
 
@@ -32,9 +42,14 @@ def generate(model,tokenizer,prompt,max_new_token=50):
     )
 
     with torch.no_grad():
+        #The underscore _ means we don't need the loop counter.
         for _ in range(max_new_token):
 
+            #model.position_embedding.num_embeddings retrieves the number of available positional embeddings,
             context_input=context[:, -model.position_embedding.num_embeddings:]
+
+            #Get model predictions
+            #The model processes the current context and returns vocabulary scores.
 
             logits=model(context_input)
 
