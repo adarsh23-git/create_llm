@@ -62,7 +62,7 @@ def generate(model,tokenizer,prompt,max_new_token=50,temperature=1.0):
             # and purpose of Top_k is to restricts the number of candidate tokens
 
             logits=logits/temperature
-            top_k=2
+            top_k=5
             values,indices=torch.topk(logits,top_k,dim=-1)
             filtered_logits=torch.full_like(logits,float('-inf'))
             filtered_logits.scatter_(-1,indices,values)
@@ -87,7 +87,7 @@ result=generate(
     tokenizer,
     prompt="hello",
     max_new_token=50,
-    temperature=0.2
+    temperature=1.0
 )
 
 print("generated text")

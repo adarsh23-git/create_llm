@@ -18,7 +18,7 @@ tokenizer=CharacterTokenizer(text)
 
 encoded_data=tokenizer.encode(text)       #Convert characters into token IDs
 
-block_size=3
+block_size=32
 
 dataset=LanguageDataset(                    #Creates input-target pairs
     encoded_data,
