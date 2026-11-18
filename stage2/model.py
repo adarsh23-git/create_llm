@@ -138,9 +138,20 @@ class MiniGPT(nn.Module):
         #     block_size
         # )
 
-        self.transformer_block=TransformerBlock(
-            embedding_dim,
-            block_size
+        # self.transformer_block=TransformerBlock(
+        #     embedding_dim,
+        #     block_size
+        # )
+
+        #It creates four separate TransformerBlock instances
+        #Each block has its own trainable parameters. They do not share weights
+
+        self.num_layers=4
+        self.transformer_blocks=nn.Sequential(
+            *[
+                TransformerBlock(embedding_dim,block_size)
+                for _ in range(self.num_layers)
+            ]
         )
 
         self.lm_head=nn.Linear(           #lm_head converts the transformer’s output embeddings into vocabulary scores (logits)
@@ -163,7 +174,7 @@ class MiniGPT(nn.Module):
         embedded = token_embedded + position_embedded
 
         # attention_output=self.attention(embedded)
-        output=self.transformer_block(embedded)
+        output=self.transformer_blocks(embedded)
         logits=self.lm_head(output)
         return logits
 
