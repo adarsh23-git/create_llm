@@ -3,9 +3,9 @@ import torch.nn as nn
 from stage2.model import MiniGPT
 
 model=MiniGPT(
-    vocab_size=17,
-    block_size=3,
-    embedding_dim=8
+    vocab_size=23,
+    block_size=32,
+    embedding_dim=32
 )
 
 x=torch.tensor([
