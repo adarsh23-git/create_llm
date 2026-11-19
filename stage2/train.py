@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 
 from tokenizer import CharacterTokenizer
 from dataset import LanguageDataset
+from dataset import get_random_batch
 from model import MiniGPT
 
 project_root=Path(__file__).resolve().parents[1]
@@ -14,27 +15,65 @@ text=(project_root/"data"/"tiny.txt").read_text(
     encoding="utf-8"
 )
 
-tokenizer=CharacterTokenizer(text)   
+tokenizer=CharacterTokenizer(text)
 
 encoded_data=tokenizer.encode(text)       #Convert characters into token IDs
 
-block_size=32
+# Convert encoded data into PyTorch tensor
+data=torch.tensor(encoded_data,dtype=torch.long)
 
-dataset=LanguageDataset(                    #Creates input-target pairs
-    encoded_data,
-    block_size
-)
+# split data into training and validation
+split_index=int(0.9*len(data))
 
-dataloader=DataLoader(                     #Groups examples into batches
-    dataset,
-    batch_size=2,
-    shuffle=True
-)
+train_data=data[:split_index]
+val_data=data[split_index:]
+
+print("total tokens :",len(data))
+print("training tokens :",len(train_data))
+print("validation tokens :",len(val_data))
+
+# Configuration
+block_size=64
+batch_size=16
+embedding_dim=32
+
+max_steps=5000
+eval_interval=100
+eval_iters=20
+
+# dataset=LanguageDataset(                    #Creates input-target pairs
+#     encoded_data,
+#     block_size
+# )
+
+# train_dataset=LanguageDataset(train_data,block_size)
+# val_dataset=LanguageDataset(val_data,block_size)
+
+# print("training dataset size :",len(train_dataset))
+# print("validation dataset size :",len(val_dataset))
+
+# dataloader=DataLoader(                     #Groups examples into batches
+#     dataset,
+#     batch_size=2,
+#     shuffle=True
+# )
+
+# train_loader = DataLoader(
+#     train_dataset,
+#     batch_size=32,
+#     shuffle=True
+# )
+
+# val_loader = DataLoader(
+#     val_dataset,
+#     batch_size=32,
+#     shuffle=False
+# )
 
 model=MiniGPT(
     vocab_size=tokenizer.vocab_size,
     block_size=block_size,
-    embedding_dim=32
+    embedding_dim=embedding_dim
 )
 
 loss_function=nn.CrossEntropyLoss()
@@ -46,50 +85,127 @@ optimizer=torch.optim.AdamW(
 
 print("model created successfully")
 
-num_epochs=100
 
-for epoch in range(num_epochs):
-    total_loss=0
-    for x,y in dataloader:
-        optimizer.zero_grad()
+# -------- EVALUATION FUNCTION --------
 
-        logits=model(x)         #	Predicts next-token logits
+def estimate_loss():
 
-        batch_size,sequence_length,vocab_size=logits.shape
+    model.eval()
 
-        loss=loss_function(
-            logits.reshape(batch_size*sequence_length,vocab_size),
-            y.reshape(batch_size*sequence_length)
+    results={}
+
+    with torch.no_grad():
+
+        # Evaluate both training and validation data
+        for split,split_data in [
+            ("train",train_data),
+            ("val",val_data)
+        ]:
+
+            losses=torch.zeros(eval_iters)
+
+            for k in range(eval_iters):
+
+                x,y=get_random_batch(
+                    split_data,
+                    batch_size,
+                    block_size
+                )
+
+                logits=model(x)
+
+                batch_size_current,sequence_length,vocab_size=logits.shape
+
+                loss=loss_function(
+                    logits.reshape(
+                        batch_size_current*sequence_length,
+                        vocab_size
+                    ),
+                    y.reshape(
+                        batch_size_current*sequence_length
+                    )
+                )
+
+                losses[k]=loss.item()
+
+            results[split]=losses.mean().item()
+
+    model.train()
+
+    return results
+
+
+# -------- TRAINING LOOP --------
+
+for step in range(max_steps):
+
+    # Get random training batch
+    x,y=get_random_batch(
+        train_data,
+        batch_size,
+        block_size
+    )
+
+    # Predict next-token logits
+    logits=model(x)
+
+    batch_size_current,sequence_length,vocab_size=logits.shape
+
+    loss=loss_function(
+        logits.reshape(
+            batch_size_current*sequence_length,
+            vocab_size
+        ),
+        y.reshape(
+            batch_size_current*sequence_length
+        )
+    )
+
+    optimizer.zero_grad()
+
+    loss.backward()
+
+    optimizer.step()
+
+
+    # -------- VALIDATION --------
+
+    if (step+1)%eval_interval==0:
+
+        losses=estimate_loss()
+
+        print(
+            f"Step [{step+1}/{max_steps}] | "
+            f"Train Loss: {losses['train']:.4f} | "
+            f"Validation Loss: {losses['val']:.4f}",
+            flush=True
         )
 
-        loss.backward()
 
-        optimizer.step()
+# Test batch shapes
+x,y=get_random_batch(
+    train_data,
+    batch_size,
+    block_size
+)
 
-        total_loss+=loss.item()
-
-    average_loss=total_loss/len(dataloader)
-
-    if (epoch+1)%10==0:
-        print(f"epoch[{epoch+1}/{num_epochs}], loss :{average_loss:.4f}")
-
-print("vocabulary size :",tokenizer.vocab_size)
-print("dataset size :",len(dataset))
-
-x,y=next(iter(dataloader))
-
-print("input shape :",x.shape)
-print("output shape :",y.shape)
+print("Vocabulary size:",tokenizer.vocab_size)
+print("Training tokens:",len(train_data))
+print("Input shape:",x.shape)
+print("Target shape:",y.shape)
 
 
-checkpoint_path=project_root/"checkpoint"/"minigpt.pt"
+# -------- SAVE CHECKPOINT --------
+
+checkpoint_path=project_root/"checkpoints"/"minigpt.pt"
+
 checkpoint_path.parent.mkdir(parents=True,exist_ok=True)
 
 torch.save({
     "model_state_dict":model.state_dict(),
     "vocab_size":tokenizer.vocab_size,
     "block_size":block_size,
-    "embedding_dim":32,
+    "embedding_dim":embedding_dim,
     "chars":tokenizer.chars
 },checkpoint_path)
 
