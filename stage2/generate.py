@@ -9,13 +9,17 @@ from tokenizer import CharacterTokenizer
 # .parents[1] → goes up two directory levels in the path's parent hierarchy.
 
 project_root=Path(__file__).resolve().parents[1]
-checkpoint_path=project_root/"checkpoint"/"minigpt.pt"
+checkpoint_path=project_root/"checkpoints"/"minigpt.pt"
 
 checkpoint=torch.load(
     checkpoint_path,
     map_location="cpu",
     weights_only=True
 )
+print("Checkpoint loaded successfully!")
+print("Block size:", checkpoint["block_size"])
+print("Embedding dimension:", checkpoint["embedding_dim"])
+print("Vocabulary size:", checkpoint["vocab_size"])
 
 tokenizer=CharacterTokenizer("".join(checkpoint["chars"]))
 
@@ -32,6 +36,7 @@ model=MiniGPT(
 #load_state_dict() → replaces those parameters with the learned parameters from training.
 
 model.load_state_dict(checkpoint["model_state_dict"])
+print("Model weights loaded successfully!")
 
 model.eval()
 
@@ -85,7 +90,7 @@ def generate(model,tokenizer,prompt,max_new_token=50,temperature=1.0):
 result=generate(
     model,
     tokenizer,
-    prompt="hello",
+    prompt="First citizen",
     max_new_token=50,
     temperature=1.0
 )
