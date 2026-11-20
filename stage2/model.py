@@ -15,7 +15,7 @@ class CausalSelfAttention(nn.Module):
         self.block_size = block_size
         self.embedding_dim = embedding_dim
 
-        self.num_heads=2
+        self.num_heads=4
         self.head_dim=embedding_dim // self.num_heads
 
         self.output_layer=nn.Linear(       #Its job is to learn how to combine information from different attention heads

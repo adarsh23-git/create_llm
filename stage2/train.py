@@ -35,7 +35,7 @@ print("validation tokens :",len(val_data))
 # Configuration
 block_size=64
 batch_size=16
-embedding_dim=32
+embedding_dim=64
 
 max_steps=5000
 eval_interval=100
@@ -173,10 +173,10 @@ for step in range(max_steps):
         )
     )
 
-# zero_grad() — clear previous gradients.
-# backward() — calculate new gradients.
-# optimizer.step() — update model parameters.
-# scheduler.step() — adjust the learning rate for the next update.
+    # zero_grad() — clear previous gradients.
+    # backward() — calculate new gradients.
+    # optimizer.step() — update model parameters.
+    # scheduler.step() — adjust the learning rate for the next update.
 
     optimizer.zero_grad()
 
@@ -191,7 +191,7 @@ for step in range(max_steps):
     if (step+1)%eval_interval==0:
 
         losses=estimate_loss()
-        
+
 	    # Reads current learning rate
         current_lr = optimizer.param_groups[0]["lr"]
 
@@ -219,7 +219,7 @@ print("Target shape:",y.shape)
 
 # -------- SAVE CHECKPOINT --------
 
-checkpoint_path=project_root/"checkpoints"/"minigpt.pt"
+checkpoint_path=project_root/"checkpoints"/"minigpt_v2.pt"
 
 checkpoint_path.parent.mkdir(parents=True,exist_ok=True)
 

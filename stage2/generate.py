@@ -9,7 +9,7 @@ from tokenizer import CharacterTokenizer
 # .parents[1] → goes up two directory levels in the path's parent hierarchy.
 
 project_root=Path(__file__).resolve().parents[1]
-checkpoint_path=project_root/"checkpoints"/"minigpt.pt"
+checkpoint_path=project_root/"checkpoints"/"minigpt_v2.pt"
 
 checkpoint=torch.load(
     checkpoint_path,
@@ -42,7 +42,7 @@ model.eval()
 
 def generate(model,tokenizer,prompt,max_new_token=50,temperature=1.0):
     if temperature<=0:
-        raise ValueError("temperature must be greater than 0")\
+        raise ValueError("temperature must be greater than 0")
         
     context=torch.tensor(
         [tokenizer.encode(prompt)],
@@ -71,7 +71,50 @@ def generate(model,tokenizer,prompt,max_new_token=50,temperature=1.0):
             values,indices=torch.topk(logits,top_k,dim=-1)
             filtered_logits=torch.full_like(logits,float('-inf'))
             filtered_logits.scatter_(-1,indices,values)
-            probabilities=torch.softmax(logits,dim=-1)
+            probabilities=torch.softmax(filtered_logits,dim=-1)
+
+#             Operation	Purpose
+# torch.sort()	Sort probabilities from highest to lowest
+# torch.cumsum()	Calculate cumulative probabilities
+# > top_p	Identify tokens beyond the threshold
+# scatter()	Map sorted positions back to original token positions
+# probabilities[...] = 0	Remove unwanted candidates
+# Division by sum	Normalize remaining probabilities
+            # Top-P sampling
+            top_p = 0.90
+
+            sorted_probs, sorted_indices = torch.sort(
+                probabilities,
+                descending=True
+            )
+
+            cumulative_probs = torch.cumsum(
+                sorted_probs,
+                dim=-1
+            )
+
+            sorted_indices_to_remove = cumulative_probs > top_p
+
+        # Keep at least the most probable token
+            sorted_indices_to_remove[..., 1:] = (
+                sorted_indices_to_remove[..., :-1].clone()
+            )
+
+            sorted_indices_to_remove[..., 0] = False
+
+            indices_to_remove = sorted_indices_to_remove.scatter(
+                -1,
+                sorted_indices,
+                sorted_indices_to_remove
+            )
+
+            probabilities[indices_to_remove] = 0.0
+
+            probabilities = probabilities / probabilities.sum(
+                dim=-1,
+                keepdim=True
+            )
+            
 
             #argmax() — Always chooses the highest probability
             #multinomial()- To randomly sample a character according to its predicted probabilities, not stick with highest probability
