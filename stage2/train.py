@@ -78,9 +78,21 @@ model=MiniGPT(
 
 loss_function=nn.CrossEntropyLoss()
 
+
+# T_max=max_steps: the learning rate follows its cosine decay over 5,000 steps.
+# eta_min=0.0001: the minimum learning rate.
+# learning_rate=0.001: the starting learning rate.
+
+learning_rate=0.001
 optimizer=torch.optim.AdamW(
     model.parameters(),
-    lr=0.001
+    lr=learning_rate
+)
+
+scheduler=torch.optim.lr_scheduler.CosineAnnealingLR(
+    optimizer,
+    T_max=max_steps,
+    eta_min=0.0001
 )
 
 print("model created successfully")
@@ -161,21 +173,31 @@ for step in range(max_steps):
         )
     )
 
+# zero_grad() — clear previous gradients.
+# backward() — calculate new gradients.
+# optimizer.step() — update model parameters.
+# scheduler.step() — adjust the learning rate for the next update.
+
     optimizer.zero_grad()
 
     loss.backward()
 
     optimizer.step()
 
+    scheduler.step()
 
     # -------- VALIDATION --------
 
     if (step+1)%eval_interval==0:
 
         losses=estimate_loss()
+        
+	    # Reads current learning rate
+        current_lr = optimizer.param_groups[0]["lr"]
 
         print(
             f"Step [{step+1}/{max_steps}] | "
+            f"LR: {current_lr:.6f} | "
             f"Train Loss: {losses['train']:.4f} | "
             f"Validation Loss: {losses['val']:.4f}",
             flush=True

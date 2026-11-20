@@ -105,16 +105,19 @@ class TransformerBlock(nn.Module):
             nn.ReLU(),
             nn.Linear(embedding_dim*4,embedding_dim)
         )
+        self.dropout = nn.Dropout(0.2)
         self.layer_norm2 = nn.LayerNorm(embedding_dim)
 
     def forward(self,x):
         attention_output=self.attention(x)
-        x=x+attention_output
+        # x=x+attention_output
+        x=x+self.dropout(attention_output)
 
         x=self.layer_norm1(x)
 
         fnn_output=self.fnn(x)
-        x=x+fnn_output
+        # x=x+fnn_output
+        x=x+self.dropout(fnn_output)
         x=self.layer_norm2(x)
 
         return x
@@ -131,6 +134,7 @@ class MiniGPT(nn.Module):
             block_size,
             embedding_dim
         )
+        self.embedding_dropout = nn.Dropout(0.2)
 
         # Create attention only once
         # self.attention = CausalSelfAttention(
@@ -175,6 +179,7 @@ class MiniGPT(nn.Module):
 
         # attention_output=self.attention(embedded)
         output=self.transformer_blocks(embedded)
+        output=self.embedding_dropout(output)
         logits=self.lm_head(output)
         return logits
 

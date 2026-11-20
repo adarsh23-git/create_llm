@@ -38,3 +38,7 @@ targets=y.view(                                #Targets are reshaped from [2, 3]
 loss=loss_function(logits,targets)
 
 print("loss :",loss.item())
+
+loss.backward()
+
+print("Gradient check:", model.transformer_blocks[0].attention.query_layer.weight.grad is not None)
