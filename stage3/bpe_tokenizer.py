@@ -190,63 +190,63 @@ class BPETokenizer:
 
         print("Tokenizer loaded successfully!")
 
+if __name__=="__main__":
+    tokenizer = BPETokenizer()
 
-tokenizer = BPETokenizer()
+    text = "banana banana"
 
-text = "banana banana"
+    final_tokens = tokenizer.train(
+        text,
+        num_merges=5
+    )
 
-final_tokens = tokenizer.train(
-    text,
-    num_merges=5
-)
+    print("\nFinal tokens:", final_tokens)
+    print("Learned merges:", tokenizer.merges)
 
-print("\nFinal tokens:", final_tokens)
-print("Learned merges:", tokenizer.merges)
+    vocab = tokenizer.build_vocab()
 
-vocab = tokenizer.build_vocab()
+    print("\nVocabulary:", vocab)
 
-print("\nVocabulary:", vocab)
+    encoded = tokenizer.encode("banana")
 
-encoded = tokenizer.encode("banana")
+    print("\nEncoded IDs:", encoded)
 
-print("\nEncoded IDs:", encoded)
+    decoded = tokenizer.decode(encoded)
 
-decoded = tokenizer.decode(encoded)
+    print("\nDecoded text:", decoded)
 
-print("\nDecoded text:", decoded)
+    test_text = "banana apple"
 
-test_text = "banana apple"
+    encoded = tokenizer.encode(test_text)
 
-encoded = tokenizer.encode(test_text)
+    decoded = tokenizer.decode(encoded)
 
-decoded = tokenizer.decode(encoded)
+    print("\nOriginal:", test_text)
+    print("Encoded:", encoded)
+    print("Decoded:", decoded)
 
-print("\nOriginal:", test_text)
-print("Encoded:", encoded)
-print("Decoded:", decoded)
+    print("Round trip successful:", test_text == decoded)
 
-print("Round trip successful:", test_text == decoded)
-
-print("banana:", tokenizer.encode("banana"))
-print("ban:", tokenizer.encode("ban"))
-print("an:", tokenizer.encode("an"))
-
-
-project_root = Path(__file__).resolve().parents[1]
-
-save_path = project_root / "checkpoints" / "bpe_tokenizer.json"
-
-save_path.parent.mkdir(parents=True, exist_ok=True)
-
-tokenizer.save(save_path)
+    print("banana:", tokenizer.encode("banana"))
+    print("ban:", tokenizer.encode("ban"))
+    print("an:", tokenizer.encode("an"))
 
 
-loaded_tokenizer = BPETokenizer()
+    project_root = Path(__file__).resolve().parents[1]
 
-loaded_tokenizer.load(save_path)
+    save_path = project_root / "checkpoints" / "bpe_tokenizer.json"
 
-encoded = loaded_tokenizer.encode("banana")
-decoded = loaded_tokenizer.decode(encoded)
+    save_path.parent.mkdir(parents=True, exist_ok=True)
 
-print("Encoded:", encoded)
-print("Decoded:", decoded)
+    tokenizer.save(save_path)
+
+
+    loaded_tokenizer = BPETokenizer()
+
+    loaded_tokenizer.load(save_path)
+
+    encoded = loaded_tokenizer.encode("banana")
+    decoded = loaded_tokenizer.decode(encoded)
+
+    print("Encoded:", encoded)
+    print("Decoded:", decoded)
