@@ -1,5 +1,7 @@
-class BPETokenizer:
+import json
+from pathlib import Path
 
+class BPETokenizer:
     def __init__(self):
         self.vocab = {}
         self.merges = []
@@ -74,30 +76,177 @@ class BPETokenizer:
 
         return merged_tokens
 
+# tokens = list(text) converts text into individual characters.
+# for i in range(num_merges) repeats the merging process.
+# self.get_pairs(tokens) finds the current adjacent pairs.
+# self.count_pairs(pairs) recalculates their frequencies.
+# self.get_most_frequent_pair(...) selects the next pair.
+# self.merge_pair(...) performs the merge.
+# self.merges.append(...) remembers the merge rule for future encoding.
+
+    def train(self, text, num_merges):
+
+        tokens = list(text)
+        self.vocab=set(tokens)
+        self.merges=[]
+
+        for i in range(num_merges):
+
+            pairs = self.get_pairs(tokens)
+
+            pair_frequency = self.count_pairs(pairs)
+
+            most_frequent_pair = self.get_most_frequent_pair(pair_frequency)
+
+            if most_frequent_pair is None:
+                break
+
+            tokens = self.merge_pair(tokens, most_frequent_pair)
+            self.vocab.add(most_frequent_pair[0] + most_frequent_pair[1])
+
+            self.merges.append(most_frequent_pair)
+
+            print(f"Merge {i+1}: {most_frequent_pair}")
+        
+        return tokens
+
+# set(tokens) removes duplicate tokens.
+# sorted(...) sorts the unique tokens.
+# enumerate(...) assigns each token an integer ID.
+# self.vocab stores the resulting dictionary.
+
+    def build_vocab(self):
+
+        unique_tokens = sorted(self.vocab)
+        unique_tokens.append("<UNK>")
+
+        self.vocab = {
+            token: index
+            for index, token in enumerate(unique_tokens)
+        }
+        self.itos={
+            index:token
+            for token,index in self.vocab.items()
+        }
+
+        return self.vocab
+
+    def encode(self, text):
+
+        tokens = list(text)
+        for pair in self.merges:
+
+            tokens = self.merge_pair(tokens, pair)
+
+        token_ids = [
+            self.vocab.get(token,self.vocab["<UNK>"])
+            for token in tokens
+        ]
+
+        return token_ids
+
+    def decode(self, token_ids):
+
+        tokens = [
+            self.itos[token_id]
+            for token_id in token_ids
+        ]
+
+        return ''.join(tokens)
+
+# data combines the vocabulary and merge rules.
+# open(..., "w") creates or overwrites a JSON file.
+# json.dump() writes Python data into JSON format.
+# indent=4 makes the file readable.
+
+    def save(self, file_path):
+
+        data = {
+            "vocab": self.vocab,
+            "merges": self.merges
+        }
+
+        with open(file_path, "w", encoding="utf-8") as file:
+            json.dump(data, file, indent=4)
+
+        print("Tokenizer saved successfully!")
+
+    def load(self, file_path):
+
+        with open(file_path, "r", encoding="utf-8") as file:
+            data = json.load(file)
+
+        self.vocab = data["vocab"]
+
+        self.itos = {
+            index: token
+            for token, index in self.vocab.items()
+        }
+
+        self.merges = [
+            tuple(pair)
+            for pair in data["merges"]
+        ]
+
+        print("Tokenizer loaded successfully!")
 
 
 tokenizer = BPETokenizer()
 
-tokens = ["a", "b", "c", "a", "b"]
+text = "banana banana"
 
-pairs = tokenizer.get_pairs(tokens)
-
-print(pairs)
-
-pair_frequency = tokenizer.count_pairs(pairs)
-
-print(pair_frequency)
-
-most_frequent_pair = tokenizer.get_most_frequent_pair(
-    pair_frequency
+final_tokens = tokenizer.train(
+    text,
+    num_merges=5
 )
 
-print("Most frequent pair:", most_frequent_pair)
+print("\nFinal tokens:", final_tokens)
+print("Learned merges:", tokenizer.merges)
 
-new_tokens = tokenizer.merge_pair(
-    tokens,
-    most_frequent_pair
-)
+vocab = tokenizer.build_vocab()
 
-print("Before merging:", tokens)
-print("After merging:", new_tokens)
+print("\nVocabulary:", vocab)
+
+encoded = tokenizer.encode("banana")
+
+print("\nEncoded IDs:", encoded)
+
+decoded = tokenizer.decode(encoded)
+
+print("\nDecoded text:", decoded)
+
+test_text = "banana apple"
+
+encoded = tokenizer.encode(test_text)
+
+decoded = tokenizer.decode(encoded)
+
+print("\nOriginal:", test_text)
+print("Encoded:", encoded)
+print("Decoded:", decoded)
+
+print("Round trip successful:", test_text == decoded)
+
+print("banana:", tokenizer.encode("banana"))
+print("ban:", tokenizer.encode("ban"))
+print("an:", tokenizer.encode("an"))
+
+
+project_root = Path(__file__).resolve().parents[1]
+
+save_path = project_root / "checkpoints" / "bpe_tokenizer.json"
+
+save_path.parent.mkdir(parents=True, exist_ok=True)
+
+tokenizer.save(save_path)
+
+
+loaded_tokenizer = BPETokenizer()
+
+loaded_tokenizer.load(save_path)
+
+encoded = loaded_tokenizer.encode("banana")
+decoded = loaded_tokenizer.decode(encoded)
+
+print("Encoded:", encoded)
+print("Decoded:", decoded)
