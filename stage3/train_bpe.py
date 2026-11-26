@@ -25,6 +25,11 @@ final_tokens = tokenizer.train(
 # 5. Build vocabulary
 vocab = tokenizer.build_vocab()
 
+encoded_data = tokenizer.encode(text)
+
+print("Total BPE tokens:", len(encoded_data))
+print("Original characters:", len(text))
+
 print("Vocabulary size:", len(vocab))
 print("Total merge rules:", len(tokenizer.merges))
 
@@ -34,3 +39,16 @@ save_path = project_root / "checkpoints" / "bpe_tokenizer.json"
 save_path.parent.mkdir(parents=True, exist_ok=True)
 
 tokenizer.save(save_path)
+
+# 8. Test saved tokenizer
+loaded_tokenizer = BPETokenizer()
+loaded_tokenizer.load(save_path)
+
+test_text = "Hello world! This is a tokenizer test."
+
+encoded = loaded_tokenizer.encode(test_text)
+decoded = loaded_tokenizer.decode(encoded)
+
+print("Test text:", test_text)
+print("Decoded text:", decoded)
+print("Round trip:", test_text == decoded)

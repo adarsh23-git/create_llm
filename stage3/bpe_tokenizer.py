@@ -1,3 +1,4 @@
+import re
 import json
 from pathlib import Path
 
@@ -86,29 +87,57 @@ class BPETokenizer:
 
     def train(self, text, num_merges):
 
-        tokens = list(text)
-        self.vocab=set(tokens)
-        self.merges=[]
+        # 1. Pre-tokenize text
+        pieces = self.pre_tokenize(text)
+
+        # 2. Convert every piece into a list of characters
+        tokens = [list(piece) for piece in pieces]
+
+        # 3. Initialize vocabulary and merges
+        self.vocab = set(text)
+        self.merges = []
 
         for i in range(num_merges):
 
-            pairs = self.get_pairs(tokens)
+            # 4. Count pairs inside each piece
+            pair_frequency = {}
 
-            pair_frequency = self.count_pairs(pairs)
+            for piece_tokens in tokens:
 
+                pairs = self.get_pairs(piece_tokens)
+
+                piece_frequency = self.count_pairs(pairs)
+
+                for pair, frequency in piece_frequency.items():
+
+                    if pair in pair_frequency:
+                        pair_frequency[pair] += frequency
+                    else:
+                        pair_frequency[pair] = frequency
+
+            # 5. Find the most frequent pair globally
             most_frequent_pair = self.get_most_frequent_pair(pair_frequency)
 
             if most_frequent_pair is None:
                 break
 
-            tokens = self.merge_pair(tokens, most_frequent_pair)
+            # 6. Merge the pair separately inside every piece
+            tokens = [
+                self.merge_pair(piece_tokens, most_frequent_pair)
+                for piece_tokens in tokens
+            ]
+
+            # 7. Add the new token to vocabulary
             self.vocab.add(most_frequent_pair[0] + most_frequent_pair[1])
 
+            # 8. Save the merge rule
             self.merges.append(most_frequent_pair)
 
             print(f"Merge {i+1}: {most_frequent_pair}")
-        
+
+        # 9. Return all final pieces
         return tokens
+
 
 # set(tokens) removes duplicate tokens.
 # sorted(...) sorts the unique tokens.
@@ -128,22 +157,39 @@ class BPETokenizer:
             index:token
             for token,index in self.vocab.items()
         }
+        self.vocab_size=len(self.vocab)
 
         return self.vocab
 
+    
     def encode(self, text):
 
-        tokens = list(text)
-        for pair in self.merges:
+        # 1. Pre-tokenize the input text
+        pieces = self.pre_tokenize(text)
 
-            tokens = self.merge_pair(tokens, pair)
+        # 2. Process each piece separately
+        final_tokens = []
 
+        for piece in pieces:
+
+            tokens = list(piece)
+
+            # 3. Apply all learned merge rules
+            for pair in self.merges:
+
+                tokens = self.merge_pair(tokens, pair)
+
+            # 4. Add the final tokens to our list
+            final_tokens.extend(tokens)
+
+        # 5. Convert tokens into token IDs
         token_ids = [
-            self.vocab.get(token,self.vocab["<UNK>"])
-            for token in tokens
+            self.vocab.get(token, self.vocab["<UNK>"])
+            for token in final_tokens
         ]
 
         return token_ids
+
 
     def decode(self, token_ids):
 
@@ -182,6 +228,7 @@ class BPETokenizer:
             index: token
             for token, index in self.vocab.items()
         }
+        self.vocab_size=len(self.vocab)
 
         self.merges = [
             tuple(pair)
@@ -190,10 +237,17 @@ class BPETokenizer:
 
         print("Tokenizer loaded successfully!")
 
+    def pre_tokenize(self, text):
+        pieces = re.findall(
+            r"\w+|[^\w\s]|\s+",
+            text
+        )
+        return pieces
+
 if __name__=="__main__":
     tokenizer = BPETokenizer()
 
-    text = "banana banana"
+    text = "banana apple"
 
     final_tokens = tokenizer.train(
         text,
@@ -250,3 +304,9 @@ if __name__=="__main__":
 
     print("Encoded:", encoded)
     print("Decoded:", decoded)
+
+    text = "hello world! hello AI."
+
+    pieces = tokenizer.pre_tokenize(text)
+
+    print("Pre-tokenized pieces:", pieces)

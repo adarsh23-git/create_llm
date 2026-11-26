@@ -4,7 +4,10 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from tokenizer import CharacterTokenizer
+# from tokenizer import CharacterTokenizer
+import sys
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+from stage3.bpe_tokenizer import BPETokenizer
 from dataset import LanguageDataset
 from dataset import get_random_batch
 from model import MiniGPT
@@ -15,7 +18,11 @@ text=(project_root/"data"/"tiny.txt").read_text(
     encoding="utf-8"
 )
 
-tokenizer=CharacterTokenizer(text)
+# tokenizer=CharacterTokenizer(text)
+tokenizer=BPETokenizer()
+
+tokenizer_path=project_root/"checkpoints"/"bpe_tokenizer.json"
+tokenizer.load(tokenizer_path)
 
 encoded_data=tokenizer.encode(text)       #Convert characters into token IDs
 
@@ -219,7 +226,7 @@ print("Target shape:",y.shape)
 
 # -------- SAVE CHECKPOINT --------
 
-checkpoint_path=project_root/"checkpoints"/"minigpt_v2.pt"
+checkpoint_path=project_root/"checkpoints"/"minigpt_bpe_v2.pt"
 
 checkpoint_path.parent.mkdir(parents=True,exist_ok=True)
 
@@ -228,7 +235,8 @@ torch.save({
     "vocab_size":tokenizer.vocab_size,
     "block_size":block_size,
     "embedding_dim":embedding_dim,
-    "chars":tokenizer.chars
+    # "chars":tokenizer.chars
+    "tokenizer_type":"BPE"
 },checkpoint_path)
 
 print("model saved successfully")

@@ -2,14 +2,17 @@ import torch
 from pathlib import Path
 
 from model import MiniGPT
-from tokenizer import CharacterTokenizer
+# from tokenizer import CharacterTokenizer
+import sys
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+from stage3.bpe_tokenizer import BPETokenizer
 
 #__file__ → location of the current Python file (generate.py).
 # .resolve() → obtains its absolute path.
 # .parents[1] → goes up two directory levels in the path's parent hierarchy.
 
 project_root=Path(__file__).resolve().parents[1]
-checkpoint_path=project_root/"checkpoints"/"minigpt_v2.pt"
+checkpoint_path=project_root/"checkpoints"/"minigpt_bpe_v2.pt"
 
 checkpoint=torch.load(
     checkpoint_path,
@@ -21,7 +24,11 @@ print("Block size:", checkpoint["block_size"])
 print("Embedding dimension:", checkpoint["embedding_dim"])
 print("Vocabulary size:", checkpoint["vocab_size"])
 
-tokenizer=CharacterTokenizer("".join(checkpoint["chars"]))
+# tokenizer=CharacterTokenizer("".join(checkpoint["chars"]))
+tokenizer=BPETokenizer()
+
+tokenizer_path=project_root/"checkpoints"/"bpe_tokenizer.json"
+tokenizer.load(tokenizer_path)
 
 # recreate model Because minigpt.pt stores trained parameters, not the Python class definition itself.
 # We first create the architecture, then load its trained parameters.
